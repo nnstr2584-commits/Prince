@@ -1,0 +1,420 @@
+const express = require('express');
+const fs = require('fs');
+const path = require('path');
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+const DATA_DIR = path.join(__dirname, 'data');
+const PROGRESS_FILE = path.join(DATA_DIR, 'progress.json');
+
+app.use(express.json({ limit: '1mb' }));
+app.use(express.static(path.join(__dirname, 'public')));
+
+const LAB_CATALOG = [
+  {
+    id: 'linux-terminal',
+    title: 'Simulated Linux Terminal',
+    category: 'Linux Fundamentals',
+    difficulty: 'Beginner',
+    path: 'Beginner',
+    description: 'Safe terminal training with a fictional filesystem and safe educational commands.',
+    status: 'available',
+    objectives: ['Understand shell basics', 'Navigate a sample filesystem', 'Read files safely'],
+    instructions: 'Use the supported commands listed in the terminal help menu. Practice reading files and moving through directories.'
+  },
+  {
+    id: 'web-security-playground',
+    title: 'Web Security Playground',
+    category: 'Web Security',
+    difficulty: 'Intermediate',
+    path: 'Intermediate',
+    description: 'Explore simulated SQL injection, XSS, auth, and validation vulnerabilities in a contained environment.',
+    status: 'available',
+    objectives: ['Recognize insecure patterns', 'Understand mitigations', 'Verify secure implementations'],
+    instructions: 'Try the demo inputs and review each explanation before moving to the secure version.'
+  },
+  {
+    id: 'blue-team-investigation',
+    title: 'Blue Team Investigation',
+    category: 'Log Analysis',
+    difficulty: 'Advanced',
+    path: 'Advanced',
+    description: 'Investigate fictional login events, suspicious traffic, and classify incidents.',
+    status: 'available',
+    objectives: ['Filter logs', 'Identify suspicious behavior', 'Draft an incident report'],
+    instructions: 'Use the event table, filters, and timeline to isolate the anomaly and define the response.'
+  },
+  {
+    id: 'network-http',
+    title: 'Network and HTTP Fundamentals',
+    category: 'Networking',
+    difficulty: 'Beginner',
+    path: 'Beginner',
+    description: 'Inspect mock HTTP traffic, headers, DNS, ports, TLS, and packet flows without scanning live hosts.',
+    status: 'available',
+    objectives: ['Read HTTP requests', 'Review status codes', 'Understand ports and TLS'],
+    instructions: 'Study the sample traffic, answer the guided prompts, and confirm your understanding.'
+  }
+];
+
+const CHALLENGES = [
+  {
+    id: 'linux-terminal-pwd',
+    title: 'Locate the working directory',
+    objective: 'Confirm that the learner can identify the current directory.',
+    difficulty: 'Beginner',
+    instructions: 'Run pwd in the terminal simulator to display the current directory.',
+    hint: 'The prompt usually starts in the user home directory.',
+    points: 10,
+    validation: {
+      type: 'terminal',
+      expected: ['/home/analyst', '/home/analyst/workspace']
+    }
+  },
+  {
+    id: 'web-security-xss',
+    title: 'Recognize unsafe reflection',
+    objective: 'Explain why reflected XSS is dangerous and how to mitigate it.',
+    difficulty: 'Intermediate',
+    instructions: 'Describe why the sample reflected script is unsafe and identify the mitigation.',
+    hint: 'The problem is caused by untrusted input being rendered without sanitization.',
+    points: 25,
+    validation: {
+      type: 'answer',
+      expected: ['sanitize', 'escape', 'encode', 'validate', 'context']
+    }
+  },
+  {
+    id: 'blue-team-incident',
+    title: 'Isolate the suspicious login pattern',
+    objective: 'Identify the suspicious IP and determine the likely incident classification.',
+    difficulty: 'Advanced',
+    instructions: 'Use the investigation logs to identify the repeated password failures and classify the event.',
+    hint: 'Look for rapid repeated failures from a single source using the log timestamps and IP filter.',
+    points: 40,
+    validation: {
+      type: 'incident',
+      expected: {
+        ip: '198.51.100.18',
+        severity: 'high'
+      }
+    }
+  },
+  {
+    id: 'network-http',
+    title: 'Inspect the HTTP exchange',
+    objective: 'Identify the HTTP method, status, and protocol used in the sample response.',
+    difficulty: 'Beginner',
+    instructions: 'Review the prerecorded packet and determine the method and status code.',
+    hint: 'The sample request is a GET to the root path and the response is a common success code.',
+    points: 15,
+    validation: {
+      type: 'http',
+      expected: {
+        method: 'GET',
+        status: 200,
+        protocol: 'HTTP/1.1'
+      }
+    }
+  }
+];
+
+const DEFAULT_PROGRESS = {
+  demoUser: {
+    profile: 'local-demo-user',
+    mode: 'demo',
+    labs: {
+      'linux-terminal': { completed: false, attempts: 0, lastUpdated: null },
+      'web-security-playground': { completed: false, attempts: 0, lastUpdated: null },
+      'blue-team-investigation': { completed: false, attempts: 0, lastUpdated: null },
+      'network-http': { completed: false, attempts: 0, lastUpdated: null }
+    },
+    challenges: [],
+    skills: {
+      networking: { introduced: true, practiced: false, mastered: false },
+      linux: { introduced: true, practiced: false, mastered: false },
+      webSecurity: { introduced: true, practiced: false, mastered: false },
+      auth: { introduced: true, practiced: false, mastered: false },
+      secureCoding: { introduced: true, practiced: false, mastered: false },
+      logAnalysis: { introduced: true, practiced: false, mastered: false },
+      incidentResponse: { introduced: true, practiced: false, mastered: false }
+    }
+  }
+};
+
+function ensureDataFiles() {
+  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+  if (!fs.existsSync(PROGRESS_FILE)) {
+    fs.writeFileSync(PROGRESS_FILE, JSON.stringify(DEFAULT_PROGRESS, null, 2));
+  }
+}
+
+function loadProgress() {
+  ensureDataFiles();
+  const raw = fs.readFileSync(PROGRESS_FILE, 'utf8');
+  try {
+    return JSON.parse(raw);
+  } catch (error) {
+    return DEFAULT_PROGRESS;
+  }
+}
+
+function saveProgress(progress) {
+  ensureDataFiles();
+  fs.writeFileSync(PROGRESS_FILE, JSON.stringify(progress, null, 2));
+}
+
+function buildSkillMap(progress) {
+  const skills = progress.demoUser?.skills || DEFAULT_PROGRESS.demoUser.skills;
+  return {
+    networking: { introduced: skills.networking.introduced || true, practiced: skills.networking.practiced || false, mastered: skills.networking.mastered || false },
+    linux: { introduced: skills.linux.introduced || true, practiced: skills.linux.practiced || false, mastered: skills.linux.mastered || false },
+    webSecurity: { introduced: skills.webSecurity.introduced || true, practiced: skills.webSecurity.practiced || false, mastered: skills.webSecurity.mastered || false },
+    auth: { introduced: skills.auth.introduced || true, practiced: skills.auth.practiced || false, mastered: skills.auth.mastered || false },
+    secureCoding: { introduced: skills.secureCoding.introduced || true, practiced: skills.secureCoding.practiced || false, mastered: skills.secureCoding.mastered || false },
+    logAnalysis: { introduced: skills.logAnalysis.introduced || true, practiced: skills.logAnalysis.practiced || false, mastered: skills.logAnalysis.mastered || false },
+    incidentResponse: { introduced: skills.incidentResponse.introduced || true, practiced: skills.incidentResponse.practiced || false, mastered: skills.incidentResponse.mastered || false }
+  };
+}
+
+const FILESYSTEM = {
+  '/': {
+    type: 'dir',
+    entries: ['home']
+  },
+  '/home': {
+    type: 'dir',
+    entries: ['analyst']
+  },
+  '/home/analyst': {
+    type: 'dir',
+    entries: ['workspace', 'notes.txt', 'logs']
+  },
+  '/home/analyst/workspace': {
+    type: 'dir',
+    entries: ['notes.txt', 'report.md']
+  },
+  '/home/analyst/logs': {
+    type: 'dir',
+    entries: ['access.log', 'auth.log']
+  },
+  '/home/analyst/notes.txt': {
+    type: 'file',
+    content: 'Security practice note: use safe files and verify commands before execution.'
+  },
+  '/home/analyst/workspace/report.md': {
+    type: 'file',
+    content: '# Lab Report\n- Confirm commands are safe\n- Validate findings before acting'
+  },
+  '/home/analyst/logs/access.log': {
+    type: 'file',
+    content: '2026-10-24 08:02 GET /index 200\n2026-10-24 08:10 GET /login 200\n2026-10-24 08:15 POST /login 302\n'
+  },
+  '/home/analyst/logs/auth.log': {
+    type: 'file',
+    content: '2026-10-24 07:58 SUCCESS alice from 203.0.113.14\n2026-10-24 08:05 FAILED bob from 198.51.100.18\n2026-10-24 08:06 FAILED bob from 198.51.100.18\n2026-10-24 08:07 FAILED bob from 198.51.100.18\n'
+  }
+};
+
+const ALLOWED_COMMANDS = new Set(['help', 'pwd', 'ls', 'cd', 'cat', 'whoami', 'clear']);
+
+function terminalState() {
+  return {
+    currentDir: '/home/analyst',
+    user: 'analyst'
+  };
+}
+
+function resolvePath(currentDir, target) {
+  if (!target || target === '.') return currentDir;
+  if (target === '/') return '/';
+  if (target.startsWith('/')) return target;
+  const normalized = `${currentDir.replace(/\/$/, '')}/${target}`;
+  return normalized.replace(/\/+/g, '/').replace(/\/$/, '') || '/';
+}
+
+function terminalExecute(input) {
+  const trimmed = String(input || '').trim();
+  if (!trimmed) {
+    return { ok: false, output: ['No command entered. Type "help" for a list of supported commands.'] };
+  }
+
+  const parts = trimmed.split(/\s+/);
+  const command = parts[0].toLowerCase();
+  const args = parts.slice(1);
+  const state = terminalState();
+
+  if (!ALLOWED_COMMANDS.has(command)) {
+    return {
+      ok: false,
+      output: [
+        `Unknown command: ${command}`,
+        'This lab uses a controlled allowlist. Try: help, pwd, ls, cd, cat, whoami, clear.'
+      ]
+    };
+  }
+
+  switch (command) {
+    case 'help':
+      return {
+        ok: true,
+        output: [
+          'Available commands:',
+          '  help      Show this help menu',
+          '  pwd       Print the current working directory',
+          '  ls        List files and directories',
+          '  cd        Change directory',
+          '  cat       View file contents',
+          '  whoami   Show the active user',
+          '  clear     Clear the terminal screen'
+        ]
+      };
+    case 'pwd':
+      return { ok: true, output: [state.currentDir] };
+    case 'whoami':
+      return { ok: true, output: [state.user] };
+    case 'ls': {
+      const target = args[0] ? resolvePath(state.currentDir, args[0]) : state.currentDir;
+      const node = FILESYSTEM[target];
+      if (!node || node.type !== 'dir') {
+        return { ok: false, output: [`ls: cannot access '${target}': No such file or directory`] };
+      }
+      return { ok: true, output: node.entries.map(name => name) };
+    }
+    case 'cd': {
+      if (!args[0]) return { ok: true, output: [state.currentDir] };
+      const target = resolvePath(state.currentDir, args[0]);
+      const node = FILESYSTEM[target];
+      if (!node || node.type !== 'dir') {
+        return { ok: false, output: [`cd: ${args[0]}: No such file or directory`] };
+      }
+      state.currentDir = target;
+      return { ok: true, output: [] };
+    }
+    case 'cat': {
+      if (!args[0]) return { ok: false, output: ['cat: missing file operand'] };
+      const target = resolvePath(state.currentDir, args[0]);
+      const node = FILESYSTEM[target];
+      if (!node || node.type !== 'file') {
+        return { ok: false, output: [`cat: ${args[0]}: No such file or directory`] };
+      }
+      return { ok: true, output: [node.content] };
+    }
+    case 'clear':
+      return { ok: true, output: ['\u001b[2J\u001b[H'] };
+    default:
+      return { ok: false, output: ['Unsupported command in the lab. Use the allowlist shown by "help".'] };
+  }
+}
+
+function validateChallengeSubmission(challengeId, payload = {}) {
+  const challenge = CHALLENGES.find((item) => item.id === challengeId);
+  if (!challenge) return { valid: false, message: 'Challenge not found.' };
+
+  switch (challenge.id) {
+    case 'linux-terminal-pwd': {
+      const value = String(payload.answer || payload.value || '').trim();
+      const ok = value.includes('/home/analyst') || value.includes('/home/analyst/workspace');
+      return ok
+        ? { valid: true, points: challenge.points, message: 'Correct. The current directory is in the analyst home area.' }
+        : { valid: false, points: 0, message: 'Try the pwd command in the terminal simulator.' };
+    }
+    case 'web-security-xss': {
+      const text = String(payload.answer || payload.value || '').toLowerCase();
+      const hasMitigation = ['sanitize', 'escape', 'encode', 'validate', 'context'].some((token) => text.includes(token));
+      return hasMitigation
+        ? { valid: true, points: challenge.points, message: 'Correct. Unsafe input should be encoded or escaped before rendering.' }
+        : { valid: false, points: 0, message: 'Explain the risk and name a mitigation such as escaping or encoding.' };
+    }
+    case 'blue-team-incident': {
+      const ipOk = String(payload.ip || '').includes('198.51.100.18');
+      const severityOk = String(payload.severity || '').toLowerCase() === 'high';
+      const indicatorOk = String(payload.finding || '').toLowerCase().includes('repeated failed logins');
+      return ipOk && severityOk && indicatorOk
+        ? { valid: true, points: challenge.points, message: 'Confirmed. Repeated failed logins from 198.51.100.18 indicate a high-severity brute-force pattern.' }
+        : { valid: false, points: 0, message: 'Review the auth.log entries and classify the activity as a repeated failed-login attempt from the suspicious IP.' };
+    }
+    case 'network-http': {
+      const method = String(payload.method || '').toUpperCase();
+      const status = Number(payload.status || payload.statusCode || 0);
+      const protocol = String(payload.protocol || '').toUpperCase();
+      return method === 'GET' && status === 200 && protocol === 'HTTP/1.1'
+        ? { valid: true, points: challenge.points, message: 'Correct. The request was a GET to / and the server responded with HTTP/1.1 200 OK.' }
+        : { valid: false, points: 0, message: 'Check the sample HTTP exchange: method GET, status 200, protocol HTTP/1.1.' };
+    }
+    default:
+      return { valid: false, message: 'Validation not configured for this challenge.' };
+  }
+}
+
+app.get('/api/health', (_req, res) => {
+  res.json({ ok: true, mode: 'demo', timestamp: new Date().toISOString() });
+});
+
+app.get('/api/labs', (_req, res) => {
+  res.json({ labs: LAB_CATALOG });
+});
+
+app.get('/api/challenges', (_req, res) => {
+  res.json({ challenges: CHALLENGES });
+});
+
+app.get('/api/progress', (_req, res) => {
+  const progress = loadProgress();
+  res.json({ user: progress.demoUser, skillMap: buildSkillMap(progress) });
+});
+
+app.get('/api/skill-map', (_req, res) => {
+  const progress = loadProgress();
+  res.json({ skillMap: buildSkillMap(progress) });
+});
+
+app.post('/api/terminal', (req, res) => {
+  const { command } = req.body || {};
+  const result = terminalExecute(command);
+  res.json(result);
+});
+
+app.post('/api/challenges/validate', (req, res) => {
+  const { challengeId, ...payload } = req.body || {};
+  const result = validateChallengeSubmission(challengeId, payload);
+  if (result.valid) {
+    const progress = loadProgress();
+    const userProgress = progress.demoUser;
+    userProgress.challenges = userProgress.challenges || [];
+    if (!userProgress.challenges.includes(challengeId)) {
+      userProgress.challenges.push(challengeId);
+    }
+
+    if (challengeId === 'linux-terminal-pwd') userProgress.skills.linux.practiced = true;
+    if (challengeId === 'web-security-xss') userProgress.skills.webSecurity.practiced = true;
+    if (challengeId === 'blue-team-incident') userProgress.skills.logAnalysis.practiced = true;
+    if (challengeId === 'network-http') userProgress.skills.networking.practiced = true;
+
+    const allCompleted = CHALLENGES.every((challenge) => userProgress.challenges.includes(challenge.id));
+    if (allCompleted) {
+      Object.keys(userProgress.skills).forEach((skill) => { userProgress.skills[skill].mastered = true; });
+    }
+
+    saveProgress(progress);
+  }
+  res.json(result);
+});
+
+app.post('/api/blue-team/investigate', (req, res) => {
+  const { ip, severity, finding } = req.body || {};
+  const response = validateChallengeSubmission('blue-team-incident', { ip, severity, finding });
+  res.json(response);
+});
+
+app.get('*', (_req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Question & Hacking Cyber Lab is running on http://localhost:${PORT}`);
+  });
+}
+
+module.exports = { app, LAB_CATALOG, CHALLENGES, validateChallengeSubmission, terminalExecute, buildSkillMap };

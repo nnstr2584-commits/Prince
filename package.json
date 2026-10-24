@@ -1,0 +1,20 @@
+{
+  "name": "question-and-hacking-cyber-lab",
+  "version": "1.0.0",
+  "description": "Question & Hacking cybersecurity learning platform with Cyber Lab simulations.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  },
+  "keywords": [
+    "cybersecurity",
+    "training",
+    "learning",
+    "express"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

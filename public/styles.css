@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Question & Hacking | Cyber Lab</title>
+    <meta name="description" content="Cybersecurity learning lab for networking, Linux, investigation, and secure coding practice." />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container nav-wrap">
+        <div class="brand-block">
+          <span class="brand-mark">Q&amp;H</span>
+          <div>
+            <strong>Question &amp; Hacking</strong>
+            <small>Cyber Lab</small>
+          </div>
+        </div>
+        <nav class="top-nav" aria-label="Main navigation">
+          <a href="#overview">Overview</a>
+          <a href="#labs">Cyber Lab</a>
+          <a href="#skill-map">Skill Map</a>
+          <a href="#progress">Progress</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section id="overview" class="hero">
+        <div class="container hero-grid">
+          <div>
+            <p class="eyebrow">Interactive learning platform</p>
+            <h1>Practice secure operations without leaving the browser.</h1>
+            <p class="lead">
+              Explore Linux fundamentals, web security concepts, threat investigation, and network analysis in a safe educational environment designed for structured skill-building.
+            </p>
+            <div class="cta-row">
+              <a class="button primary" href="#labs">Launch Cyber Lab</a>
+              <a class="button secondary" href="#skill-map">View Skill Map</a>
+            </div>
+          </div>
+          <div class="hero-panel">
+            <div class="mini-card">
+              <span>Lab mode</span>
+              <strong>Demo + local progress</strong>
+            </div>
+            <ul class="status-list">
+              <li><span>Linux</span><em>Safe terminal simulation</em></li>
+              <li><span>Web Security</span><em>Vuln. examples + fixes</em></li>
+              <li><span>Blue Team</span><em>Investigate sample logs</em></li>
+              <li><span>Network</span><em>HTTP &amp; TLS overview</em></li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section id="labs" class="section">
+        <div class="container">
+          <div class="section-header">
+            <div>
+              <p class="eyebrow">Catalog</p>
+              <h2>Cyber Lab catalog</h2>
+            </div>
+            <div class="filter-group">
+              <input id="lab-search" type="search" placeholder="Search labs, topics, or skills" aria-label="Search labs" />
+              <select id="lab-filter" aria-label="Filter by difficulty">
+                <option value="all">All levels</option>
+                <option value="Beginner">Beginner</option>
+                <option value="Intermediate">Intermediate</option>
+                <option value="Advanced">Advanced</option>
+              </select>
+            </div>
+          </div>
+          <div id="lab-list" class="card-grid" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section class="section dark">
+        <div class="container lab-layout">
+          <aside class="lab-nav">
+            <h3>Learning paths</h3>
+            <div class="path-list">
+              <div class="path-item active">
+                <span>Beginner</span>
+                <small>Linux + networking basics</small>
+              </div>
+              <div class="path-item">
+                <span>Intermediate</span>
+                <small>Web security + validation</small>
+              </div>
+              <div class="path-item">
+                <span>Advanced</span>
+                <small>Investigation + response</small>
+              </div>
+            </div>
+          </aside>
+
+          <div class="lab-main">
+            <article class="lab-panel" id="terminal-panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Lab A</p>
+                  <h3>Simulated Linux Terminal</h3>
+                </div>
+                <button class="button secondary small" id="terminal-reset" type="button">Reset</button>
+              </div>
+              <div class="terminal-window" aria-live="polite">
+                <div class="terminal-header">
+                  <span></span><span></span><span></span>
+                </div>
+                <div id="terminal-output" class="terminal-output">
+                  <p>$ help</p>
+                  <p>Available commands: help, pwd, ls, cd, cat, whoami, clear</p>
+                </div>
+              </div>
+              <div class="terminal-controls">
+                <label class="sr-only" for="terminal-input">Terminal command</label>
+                <input id="terminal-input" type="text" placeholder="Type a command: pwd" aria-label="Terminal command" />
+                <button id="terminal-run" class="button primary" type="button">Run</button>
+              </div>
+              <div class="lab-meta">
+                <p><strong>Objective:</strong> Navigate the fictional filesystem and read safe notes without executing host commands.</p>
+                <p><strong>Hint:</strong> Use help first, then try pwd and ls.</p>
+              </div>
+            </article>
+
+            <article class="lab-panel" id="security-panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Lab B</p>
+                  <h3>Web Security Playground</h3>
+                </div>
+              </div>
+              <div id="security-modules" class="security-stack"></div>
+            </article>
+
+            <article class="lab-panel" id="incident-panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Lab C</p>
+                  <h3>Blue Team Investigation</h3>
+                </div>
+              </div>
+              <div class="filter-row">
+                <input id="incident-search" type="search" placeholder="Filter by IP, user, or event" aria-label="Filter incident log search" />
+                <input id="incident-ip" type="text" placeholder="IP filter" aria-label="IP address filter" />
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Timestamp</th>
+                      <th>User</th>
+                      <th>Event</th>
+                      <th>IP Address</th>
+                      <th>Result</th>
+                    </tr>
+                  </thead>
+                  <tbody id="incident-table-body"></tbody>
+                </table>
+              </div>
+              <div class="check-grid">
+                <label>
+                  Suspicious IP
+                  <input id="suspicious-ip" type="text" value="198.51.100.18" />
+                </label>
+                <label>
+                  Severity
+                  <select id="severity-select">
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high" selected>High</option>
+                  </select>
+                </label>
+                <label class="wide">
+                  Findings summary
+                  <input id="finding-summary" type="text" value="Repeated failed logins from a single external IP" />
+                </label>
+              </div>
+              <button id="incident-validate" class="button primary" type="button">Verify investigation</button>
+              <p id="incident-feedback" class="feedback" aria-live="polite"></p>
+            </article>
+
+            <article class="lab-panel" id="network-panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Lab D</p>
+                  <h3>Network and HTTP Fundamentals</h3>
+                </div>
+              </div>
+              <div class="network-grid">
+                <div class="sample-block">
+                  <h4>HTTP request</h4>
+                  <pre>GET / HTTP/1.1
+Host: training.example.internal
+User-Agent: QH-Training/1.0
+Accept: text/html</pre>
+                </div>
+                <div class="sample-block">
+                  <h4>HTTP response</h4>
+                  <pre>HTTP/1.1 200 OK
+Content-Type: text/html
+Server: LabGateway/1.0
+Cache-Control: no-store</pre>
+                </div>
+              </div>
+              <div class="check-grid compact">
+                <label>
+                  Method
+                  <input id="http-method" type="text" value="GET" />
+                </label>
+                <label>
+                  Status code
+                  <input id="http-status" type="number" value="200" />
+                </label>
+                <label>
+                  Protocol
+                  <input id="http-protocol" type="text" value="HTTP/1.1" />
+                </label>
+              </div>
+              <button id="http-validate" class="button primary" type="button">Validate HTTP understanding</button>
+              <p id="http-feedback" class="feedback" aria-live="polite"></p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="skill-map" class="section">
+        <div class="container">
+          <div class="section-header narrow">
+            <div>
+              <p class="eyebrow">Progress model</p>
+              <h2>Skill mastery map</h2>
+            </div>
+          </div>
+          <div id="skill-map-grid" class="skill-grid"></div>
+        </div>
+      </section>
+
+      <section id="progress" class="section">
+        <div class="container">
+          <div class="section-header narrow">
+            <div>
+              <p class="eyebrow">Summary</p>
+              <h2>Learning progress</h2>
+            </div>
+          </div>
+          <div id="progress-cards" class="stat-grid"></div>
+          <div class="demo-banner">
+            <strong>Local demonstration mode:</strong> progress is tracked in the browser and saved locally for the demo account. No production credentials or live systems are used.
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
